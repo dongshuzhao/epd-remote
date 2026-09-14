@@ -25,7 +25,7 @@
   <Category>Tools:</Category>
   <WebUI>http://[IP]:[PORT:8655]/</WebUI>
   <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/dongshuzhao/epd-remote/main/frontend/favicon.png</Icon>
+  <Icon>https://raw.githubusercontent.com/dongshuzhao/epd-remote/master/frontend/favicon.png</Icon>
   <ExtraParams>--cap-add NET_ADMIN --cap-add NET_RAW</ExtraParams>
   <PostArgs/>
   <CPUset/>
