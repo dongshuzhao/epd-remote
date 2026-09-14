@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>墨水屏远程管理</title>
+	<link rel="icon" type="image/svg+xml" href="favicon.svg">
+	<link rel="alternate icon" type="image/png" href="favicon.png">
+	<link rel="apple-touch-icon" href="apple-touch-icon.png">
+	<link rel="stylesheet" href="css/main.css">
+</head>
+
+<body>
+	<!-- 图标：Lucide（ISC 许可）里挑的几个，内联成 sprite，不产生任何外链请求 -->
+	<svg class="icon-sprite" aria-hidden="true" focusable="false">
+		<symbol id="i-plug" viewBox="0 0 24 24">
+			<path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" />
+			<path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
+		</symbol>
+		<symbol id="i-unplug" viewBox="0 0 24 24">
+			<path d="m19 5 3-3" /><path d="m2 22 3-3" />
+			<path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z" />
+			<path d="M7.5 13.5 10 11" /><path d="M10.5 16.5 13 14" />
+			<path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z" />
+		</symbol>
+		<symbol id="i-settings" viewBox="0 0 24 24">
+			<path d="M20 7h-9" /><path d="M14 17H5" />
+			<circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
+		</symbol>
+		<symbol id="i-radar" viewBox="0 0 24 24">
+			<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34" /><path d="M4 6h.01" />
+			<path d="M2.29 9.62A10 10 0 1 0 21.31 8.35" />
+			<path d="M16.24 7.76A6 6 0 1 0 8.23 16.67" /><path d="M12 18h.01" />
+			<path d="M17.99 11.66A6 6 0 0 1 15.77 16.67" />
+			<circle cx="12" cy="12" r="2" /><path d="m13.41 10.59 5.66-5.66" />
+		</symbol>
+		<symbol id="i-bookmark" viewBox="0 0 24 24">
+			<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+			<line x1="12" x2="12" y1="7" y2="13" /><line x1="15" x2="9" y1="10" y2="10" />
+		</symbol>
+		<symbol id="i-trash" viewBox="0 0 24 24">
+			<path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+			<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+			<line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" />
+		</symbol>
+		<symbol id="i-calendar" viewBox="0 0 24 24">
+			<path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" />
+			<path d="M3 10h18" /><path d="M8 14h.01" /><path d="M12 14h.01" /><path d="M16 14h.01" />
+			<path d="M8 18h.01" /><path d="M12 18h.01" /><path d="M16 18h.01" />
+		</symbol>
+		<symbol id="i-clock" viewBox="0 0 24 24">
+			<circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+		</symbol>
+		<symbol id="i-eraser" viewBox="0 0 24 24">
+			<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21" />
+			<path d="M22 21H7" /><path d="m5 11 9 9" />
+		</symbol>
+		<symbol id="i-save" viewBox="0 0 24 24">
+			<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+			<path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
+			<path d="M7 3v4a1 1 0 0 0 1 1h7" />
+		</symbol>
+		<symbol id="i-rotate" viewBox="0 0 24 24">
+			<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+		</symbol>
+		<symbol id="i-alert" viewBox="0 0 24 24">
+			<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+			<path d="M12 9v4" /><path d="M12 17h.01" />
+		</symbol>
+		<symbol id="i-terminal" viewBox="0 0 24 24">
+			<polyline points="4 17 10 11 4 5" /><line x1="12" x2="20" y1="19" y2="19" />
+		</symbol>
+		<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+		<!-- 扫把（清空用）：Lucide 没有现成的，按同样的 24 网格 / 2px 描边手绘 -->
+		<symbol id="i-broom" viewBox="0 0 24 24">
+			<path d="M12 3v6.5" />
+			<path d="M8 9.5h8l1.8 6.2a1.4 1.4 0 0 1-1.35 1.8H7.55A1.4 1.4 0 0 1 6.2 15.7z" />
+			<path d="M6.7 14h10.6" />
+			<path d="M9.6 14v3.5" />
+			<path d="M14.4 14v3.5" />
+		</symbol>
+	</svg>
+
+	<header class="app-bar">
+		<h1>墨水屏远程管理</h1>
+		<span id="connstate" class="conn-state">未连接</span>
+		<button id="rssiChip" type="button" class="conn-state signal" title="目标设备的信号强度（点击重新测量）" onclick="measureRssi()">信号 --</button>
+		<button id="retryChip" type="button" class="conn-state retry hidden" title="点击停止自动轮询" onclick="cancelAutoRetry()">
+			<svg class="icon" width="14" height="14"><use href="#i-radar" /></svg>
+			<span id="retryChipText"></span>
+		</button>
+		<span class="status-bar"><span id="status"></span></span>
+		<span class="spacer"></span>
+		<a href="?debug=true" id="debug-toggle" class="app-link">开发模式</a>
+	</header>
+
+	<main class="layout">
+		<div class="col">
+			<section class="card">
+				<h2 class="card-title">设备连接</h2>
+				<div class="row">
+					<div class="field grow">
+						<label for="savedDevices">已记忆</label>
+						<select id="savedDevices" class="grow" onchange="onSavedDeviceChange()"></select>
+					</div>
+					<button id="connectbutton" type="button" class="primary icon-btn" title="连接" onclick="toggleConnection()"><svg class="icon"><use id="connectIcon" href="#i-plug" /></svg></button>
+					<details class="subtle icon-only" id="devicePanel">
+						<summary title="设备管理"><svg class="icon"><use href="#i-settings" /></svg></summary>
+						<div class="panel">
+							<div class="row">
+								<button id="scanbutton" type="button" class="tonal" onclick="doScan()"><svg class="icon"><use href="#i-radar" /></svg>扫描</button>
+								<select id="scanResults" class="grow"></select>
+							</div>
+							<div class="row">
+								<button id="savebutton" type="button" onclick="saveScannedDevice()"><svg class="icon"><use href="#i-bookmark" /></svg>记忆</button>
+								<button id="forgetbutton" type="button" class="danger" onclick="forgetDevice()"><svg class="icon"><use href="#i-trash" /></svg>删除记忆</button>
+							</div>
+						</div>
+					</details>
+				</div>
+				<hr class="divider debug">
+				<div class="row debug">
+					<div class="field grow">
+						<label for="epddriver">驱动</label>
+						<select id="epddriver" class="grow" onchange="updateDitcherOptions()"></select>
+					</div>
+				</div>
+				<div class="row debug">
+					<div class="field grow">
+						<label for="epdpins">引脚</label>
+						<input id="epdpins" type="text" class="grow" value="">
+					</div>
+					<button id="setDriverbutton" type="button" class="primary icon-btn" title="确定（写入引脚与驱动）" onclick="setDriver()"><svg class="icon"><use href="#i-check" /></svg></button>
+				</div>
+			</section>
+			<section class="card">
+				<h2 class="card-title">设备控制 <span class="hint">未连接时自动连接目标设备，执行完自动断开</span></h2>
+				<div class="row">
+					<button id="calendarmodebutton" type="button" class="primary icon-btn" title="日历模式" onclick="syncTime(1)"><svg class="icon"><use href="#i-calendar" /></svg></button>
+					<button id="clockmodebutton" type="button" class="tonal icon-btn" title="时钟模式" onclick="syncTime(2)"><svg class="icon"><use href="#i-clock" /></svg></button>
+					<button id="clearscreenbutton" type="button" class="icon-btn" title="清除屏幕" onclick="clearScreen()"><svg class="icon"><use href="#i-eraser" /></svg></button>
+					<button id="saveSettingsbutton" type="button" class="icon-btn" title="保存当前参数到记忆" onclick="saveDeviceSettings()"><svg class="icon"><use href="#i-save" /></svg></button>
+					<button id="resetbutton" type="button" class="icon-btn debug" title="重启设备" onclick="resetDevice()"><svg class="icon"><use href="#i-rotate" /></svg></button>
+					<button id="erasebutton" type="button" class="danger icon-btn debug" title="恢复出厂" onclick="eraseConfig()"><svg class="icon"><use href="#i-alert" /></svg></button>
+				</div>
+				<hr class="divider debug">
+				<div class="row debug">
+					<input type="text" id="cmdTXT" class="grow" value="" placeholder="原始指令 hex，如 0100">
+					<button id="sendcmdbutton" type="button" class="primary icon-btn" title="发送命令" onclick="sendcmd()"><svg class="icon"><use href="#i-terminal" /></svg></button>
+				</div>
+			</section>
+
+			<section class="card">
+				<h2 class="card-title">历史版本
+					<button id="historyClearbutton" type="button" class="small icon-btn right" title="清空该设备的历史版本" onclick="clearHistory()"><svg class="icon"><use href="#i-broom" /></svg></button>
+				</h2>
+				<div id="historyList" class="history-list"></div>
+			</section>
+
+			<section class="card fill">
+				<h2 class="card-title">运行日志
+					<button type="button" class="small icon-btn right" title="清空日志" onclick="clearLog()"><svg class="icon"><use href="#i-broom" /></svg></button>
+				</h2>
+				<div class="log-container" id="log"></div>
+			</section>
+
+		</div>
+		<div class="col">
+			<section class="card">
+				<h2 class="card-title">图像生成与发送 <span class="hint">生成与预览无需连接设备</span></h2>
+				<div class="row">
+					<div class="field">
+						<label for="templateSelect">模板</label>
+						<select id="templateSelect" class="w-md" onchange="onTemplateChange()"></select>
+					</div>
+					<button id="tplDefaultsbutton" type="button" class="small" onclick="fillTemplateDefaults()">填入默认值</button>
+					<button id="tplClearbutton" type="button" class="small" onclick="clearTemplateVars()">清空变量</button>
+				</div>
+				<div class="row hide" id="imageRow">
+					<div class="field grow">
+						<label for="imageFile">图片文件</label>
+						<input type="file" id="imageFile" class="grow" accept=".png,.jpg,.bmp,.webp,.jpeg" onchange="updateImage()">
+					</div>
+					<span class="hint">比例与画布不符时会进入裁剪模式</span>
+				</div>
+				<div class="template-vars" id="templateVars"></div>
+				<hr class="divider">
+				<div class="row">
+					<button type="button" class="debug" onclick="rotateCanvas()">旋转画布</button>
+					<button id="tplRenderbutton" type="button" onclick="renderCurrentTemplate()">渲染到画布</button>
+					<button type="button" onclick="clearCanvas()">清除画布</button>
+					<button type="button" class="debug" onclick="downloadDataArray()">下载数组</button>
+					<details class="subtle right" id="adjustPanel">
+						<summary>图像调整</summary>
+						<div class="panel">
+							<div class="row debug">
+								<div class="field">
+									<label for="canvasSize">画布尺寸</label>
+									<select id="canvasSize" onchange="updateCanvasSize()"></select>
+								</div>
+								<div class="field">
+									<label for="ditherMode">颜色模式</label>
+									<select id="ditherMode" onchange="applyDither()"></select>
+								</div>
+							</div>
+							<div class="row">
+								<div class="field">
+									<label for="ditherAlg">抖动算法</label>
+									<select id="ditherAlg" onchange="applyDither()"></select>
+								</div>
+								<div class="field">
+									<label for="ditherStrength">强度</label>
+									<input type="range" min="0" max="5" step="0.1" value="1.0" id="ditherStrength">
+									<span class="value-label" id="ditherStrengthValue">1.0</span>
+								</div>
+							</div>
+							<div class="row">
+								<div class="field">
+									<label for="ditherBrightness">亮度</label>
+									<input type="range" min="0.5" max="2" step="0.1" value="1.0" id="ditherBrightness">
+									<span class="value-label" id="ditherBrightnessValue">1.0</span>
+								</div>
+								<div class="field">
+									<label for="ditherContrast">对比度</label>
+									<input type="range" min="0.5" max="2" step="0.1" value="1.2" id="ditherContrast">
+									<span class="value-label" id="ditherContrastValue">1.2</span>
+								</div>
+							</div>
+							<div class="row debug">
+								<div class="field">
+									<label for="mtusize">MTU</label>
+									<input type="number" id="mtusize" value="20" min="0" max="255">
+								</div>
+								<div class="field">
+									<label for="interleavedcount">确认间隔</label>
+									<input type="number" id="interleavedcount" value="10" min="0" max="500">
+								</div>
+							</div>
+						</div>
+					</details>
+					<button id="sendimgbutton" type="button" class="primary" onclick="sendimg()">发送图片</button>
+				</div>
+			</section>
+			<section class="card fill">
+				<h2 class="card-title">预览
+					<span class="hint" id="previewZoomInfo"></span>
+					<span class="right field">
+						<label for="previewZoom">缩放</label>
+						<select id="previewZoom" onchange="setPreviewZoom(this.value)">
+							<option value="auto">自适应(整数倍)</option>
+							<option value="1">1x 点对点</option>
+							<option value="2">2x</option>
+							<option value="3">3x</option>
+							<option value="4">4x</option>
+						</select>
+					</span>
+				</h2>
+				<div class="canvas-container">
+					<canvas id="canvas" width="400" height="300"></canvas>
+					<div class="canvas-toolbar">
+						<span class="canvas-title"></span>
+						<div class="canvas-tools tool-buttons">
+							<button id="brush-mode" title="画笔" class="tool-button">✏️</button>
+							<button id="eraser-mode" title="橡皮擦" class="tool-button">🧽</button>
+							<button id="text-mode" title="添加文字" class="tool-button">T</button>
+							<button id="undo-btn" title="撤销 (Ctrl+Z)" class="tool-button hide">↶</button>
+							<button id="redo-btn" title="重做 (Ctrl+Y)" class="tool-button hide">↷</button>
+						</div>
+						<div class="canvas-tools brush-tools">
+							<select id="brush-color" title="颜色">
+								<option value="#000000">黑色</option>
+								<option value="#FF0000">红色</option>
+								<option value="#FFFF00">黄色</option>
+								<option value="#00FF00">绿色</option>
+								<option value="#0000FF">蓝色</option>
+								<option value="#FFFFFF">白色</option>
+							</select>
+							<input type="number" id="brush-size" value="2" min="1" max="100" title="粗细">
+						</div>
+						<div class="canvas-tools text-tools">
+							<select id="font-family" title="字体">
+								<option value="WQY Bitmap Song 16">点阵宋 16</option>
+								<option value="WQY Bitmap Song 12">点阵宋 12</option>
+								<option value="STXihei">华文细黑</option>
+								<option value="PingFang SC">苹方</option>
+								<option value="Microsoft Yahei">微软雅黑</option>
+								<option value="SimHei">黑体</option>
+								<option value="SimSun">宋体</option>
+								<option value="KaiTi">楷体</option>
+								<option value="FangSong">仿宋</option>
+								<option value="Arial">Arial</option>
+								<option value="monospace">Monospace</option>
+							</select>
+							<input type="number" id="font-size" value="18" min="1" max="100" title="字号">
+							<input type="text" id="text-input" placeholder="输入文字">
+							<button id="text-bold" class="tool-button" title="粗体">B</button>
+							<button id="text-italic" class="tool-button" title="斜体">I</button>
+							<button id="add-text-btn" class="primary small">添加</button>
+						</div>
+						<div class="canvas-tools crop-tools">
+							<button id="crop-zoom-in" title="放大" class="tool-button">+</button>
+							<button id="crop-zoom-out" title="缩小" class="tool-button">-</button>
+							<button id="crop-move-left" title="左移" class="tool-button">⇦</button>
+							<button id="crop-move-up" title="上移" class="tool-button">⇧</button>
+							<button id="crop-move-down" title="下移" class="tool-button">⇩</button>
+							<button id="crop-move-right" title="右移" class="tool-button">⇨</button>
+							<button class="primary small" onclick="applyDither()">完成裁剪</button>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</main>
+
+	<script type="text/javascript" src="js/epd-image.js"></script>
+	<script type="text/javascript" src="js/templates.js"></script>
+	<script type="text/javascript" src="js/paint.js"></script>
+	<script type="text/javascript" src="js/crop.js"></script>
+	<script type="text/javascript" src="js/api.js"></script>
+	<script type="text/javascript" src="js/main.js"></script>
+</body>
+
+</html>

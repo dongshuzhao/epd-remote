@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>epd-remote</Name>
+  <Repository>dongshuzhao/epd-remote:latest</Repository>
+  <Registry>https://hub.docker.com/r/dongshuzhao/epd-remote</Registry>
+  <Network>host</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>
+    Remote management tool for e-ink (EPD) displays: the frontend generates and previews
+    the image to send, the backend connects to the display over Bluetooth (BLE) and
+    pushes the data. Bluetooth requires the host network (AF_BLUETOOTH sockets are
+    isolated per network namespace, and hci0 lives in the host's netns), so this
+    template is fixed to Network Type=Host and cannot be switched to bridge networking.
+    The host does not need BlueZ installed: the container starts its own dbus-daemon
+    and bluetoothd to manage the adapter. It only needs the host to recognize the
+    Bluetooth hardware (USB or built-in) — check with `ls /sys/class/bluetooth` for hci0.
+
+    Source and builds live in the dongshuzhao/epd-remote project on Docker Hub; this
+    template pulls dongshuzhao/epd-remote:latest directly, no local docker build needed.
+  </Overview>
+  <Category>Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8655]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/dongshuzhao/epd-remote/main/frontend/favicon.png</Icon>
+  <ExtraParams>--cap-add NET_ADMIN --cap-add NET_RAW</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>
+    The host needs a usable Bluetooth adapter (USB or built-in), and no other process
+    should be holding hci0 (e.g. a bluetoothd already running on the host). The image
+    is published on Docker Hub as dongshuzhao/epd-remote and will be pulled
+    automatically on install — no local build required.
+  </Requires>
+  <Config Name="AppData Directory" Target="/data" Default="/mnt/user/appdata/epd-remote/data" Mode="rw" Description="Storage for remembered devices and send history" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/epd-remote/data</Config>
+  <Config Name="EPD_PORT" Target="EPD_PORT" Default="8655" Mode="" Description="Web UI port (avoid clashing with other containers since this uses host networking)" Type="Variable" Display="always" Required="true" Mask="false">8655</Config>
+  <Config Name="EPD_DATA_DIR" Target="EPD_DATA_DIR" Default="/data" Mode="" Description="Data directory inside the container, paired with the AppData Directory mount above; usually leave as-is" Type="Variable" Display="advanced" Required="true" Mask="false">/data</Config>
+  <Config Name="EPD_START_BLUETOOTHD" Target="EPD_START_BLUETOOTHD" Default="1" Mode="" Description="1 = the container starts its own dbus-daemon+bluetoothd (use this on hosts without BlueZ, e.g. Unraid). If the host already runs bluetoothd, mount /run/dbus instead and set EPD_USE_HOST_DBUS=1 — don't enable both" Type="Variable" Display="advanced" Required="true" Mask="false">1</Config>
+  <Config Name="TZ" Target="TZ" Default="Asia/Shanghai" Mode="" Description="Timezone, used for the timestamp sent to the display by the time-sync feature" Type="Variable" Display="advanced" Required="false" Mask="false">Asia/Shanghai</Config>
+</Container>

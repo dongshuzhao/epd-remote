@@ -1,0 +1,32 @@
+services:
+  epd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: epd-remote:latest
+    container_name: epd-remote
+    platform: linux/amd64
+    # 蓝牙必须共享宿主机网络栈：AF_BLUETOOTH 套接字按 netns 隔离，hci0 在宿主机 netns 里
+    network_mode: host
+    # 容器内自己起 dbus-daemon + bluetoothd（Unraid 这类宿主机没有 BlueZ），
+    # 管理 hci 设备需要 NET_ADMIN/NET_RAW；不够用就改成 privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./data:/data
+    environment:
+      - EPD_DATA_DIR=/data
+      - EPD_START_BLUETOOTHD=1
+      # host 网络下端口可能被别的容器占用，按需改
+      - EPD_PORT=8655
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+
+    # 如果宿主机自己就跑着 BlueZ（装了 bluez 且 bluetoothd 在运行），
+    # 改成用宿主机的：挂载 /run/dbus 并设 EPD_USE_HOST_DBUS=1，
+    # 两个 bluetoothd 同时抢 hci0 会互相踢。
+    #   volumes:
+    #     - /run/dbus:/run/dbus:ro
+    #   environment:
+    #     - EPD_USE_HOST_DBUS=1

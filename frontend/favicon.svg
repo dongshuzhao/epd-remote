@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img"
+	aria-label="墨水屏远程管理">
+	<title>墨水屏远程管理</title>
+	<defs>
+		<clipPath id="screen">
+			<rect x="8" y="12" width="48" height="36" rx="5" />
+		</clipPath>
+	</defs>
+
+	<!-- 屏体：纸白面板 + 深色边框，外部保持透明 -->
+	<rect x="8" y="12" width="48" height="36" rx="5" fill="#F6F7F9" />
+	<!-- 标题栏：对应页面上的强调色标题条 -->
+	<g clip-path="url(#screen)">
+		<rect x="8" y="12" width="48" height="10" fill="#E03127" />
+	</g>
+	<rect x="8" y="12" width="48" height="36" rx="5" fill="none" stroke="#16202B" stroke-width="4" />
+
+	<!-- 两行正文，示意点阵文字；行距留大一点，16px 下也不会糊成一团 -->
+	<rect x="15" y="27" width="26" height="4" rx="2" fill="#16202B" />
+	<rect x="15" y="38" width="18" height="4" rx="2" fill="#16202B" />
+
+	<!-- 底部支架 -->
+	<rect x="25" y="50" width="14" height="5" rx="2.5" fill="#16202B" />
+</svg>
