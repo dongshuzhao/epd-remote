@@ -1394,6 +1394,13 @@ function checkDebugMode() {
   }
 }
 
+// 窄屏（≤480px）下设备栏默认收起，点顶栏的菜单图标展开/收起；
+// 宽屏下这个按钮本身就不显示（见 main.css 的 .sidebar-toggle），
+// 侧栏始终是展开的 .sidebar-col 默认样式，不受这个开关影响。
+function toggleSidebar() {
+  el('sidebarCol').classList.toggle('open');
+}
+
 // 后端推送的日志与传输进度
 function handleEvent(event) {
   if (event.type === 'log') {

@@ -80,9 +80,15 @@
 			<path d="M9.6 14v3.5" />
 			<path d="M14.4 14v3.5" />
 		</symbol>
+		<symbol id="i-menu" viewBox="0 0 24 24">
+			<line x1="4" x2="20" y1="6" y2="6" />
+			<line x1="4" x2="20" y1="12" y2="12" />
+			<line x1="4" x2="20" y1="18" y2="18" />
+		</symbol>
 	</svg>
 
 	<header class="app-bar">
+		<button id="sidebarToggle" type="button" class="icon-btn sidebar-toggle" title="展开/收起设备栏" onclick="toggleSidebar()"><svg class="icon"><use href="#i-menu" /></svg></button>
 		<h1>墨水屏远程管理</h1>
 		<span id="connstate" class="conn-state">未连接</span>
 		<button id="rssiChip" type="button" class="conn-state signal" title="目标设备的信号强度（点击重新测量）" onclick="measureRssi()">信号 --</button>
@@ -96,7 +102,7 @@
 	</header>
 
 	<main class="layout">
-		<div class="col">
+		<div class="col sidebar-col" id="sidebarCol">
 			<section class="card">
 				<h2 class="card-title">设备连接</h2>
 				<div class="row">
@@ -137,8 +143,8 @@
 			<section class="card">
 				<h2 class="card-title">设备控制 <span class="hint">未连接时自动连接目标设备，执行完自动断开</span></h2>
 				<div class="row">
-					<button id="calendarmodebutton" type="button" class="primary icon-btn" title="日历模式" onclick="syncTime(1)"><svg class="icon"><use href="#i-calendar" /></svg></button>
-					<button id="clockmodebutton" type="button" class="tonal icon-btn" title="时钟模式" onclick="syncTime(2)"><svg class="icon"><use href="#i-clock" /></svg></button>
+					<button id="calendarmodebutton" type="button" class="icon-btn" title="日历模式" onclick="syncTime(1)"><svg class="icon"><use href="#i-calendar" /></svg></button>
+					<button id="clockmodebutton" type="button" class="icon-btn" title="时钟模式" onclick="syncTime(2)"><svg class="icon"><use href="#i-clock" /></svg></button>
 					<button id="clearscreenbutton" type="button" class="icon-btn" title="清除屏幕" onclick="clearScreen()"><svg class="icon"><use href="#i-eraser" /></svg></button>
 					<button id="saveSettingsbutton" type="button" class="icon-btn" title="保存当前参数到记忆" onclick="saveDeviceSettings()"><svg class="icon"><use href="#i-save" /></svg></button>
 					<button id="resetbutton" type="button" class="icon-btn debug" title="重启设备" onclick="resetDevice()"><svg class="icon"><use href="#i-rotate" /></svg></button>

@@ -433,7 +433,7 @@ const EPD_TEMPLATES = [
     variables: [
       { name: 'title', label: '标题', value: '今日作业' },
       { name: 'date', label: '日期', value: () => tplToday() },
-      { name: 'footer', label: '页脚', value: '好好学习，天天向上' },
+      { name: 'footer', label: '页脚', value: '好好学习，天天向上', span: 2 },
       { name: 'chinese', label: '语文', value: '', span: 2 },
       { name: 'math', label: '数学', value: '', span: 2 },
       { name: 'english', label: '英语', value: '', span: 2 },

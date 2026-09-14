@@ -1,9 +1,11 @@
 // 与后端蓝牙服务通信；页面本身不再使用 Web Bluetooth。
 const API = {
-  // 请求超时：蓝牙操作再慢也不该让页面永远等下去（发图给足时间，其余 30s）
+  // 请求超时：蓝牙操作再慢也不该让页面永远等下去（发图给足时间，其余指令也要盖住
+  // 「临时连接+执行+断开」这一整套流程——后端 connect() 内部的扫描就要等到 25s，
+  // 加上连接、写命令、断开的耗时，前端超时定太紧会在设备信号一般时先自己放弃）
   timeoutFor(path) {
     return path.includes('/api/image') ? 200000
-      : (path.includes('/api/scan') || path.includes('/api/connect') ? 60000 : 30000);
+      : (path.includes('/api/scan') || path.includes('/api/connect') ? 60000 : 45000);
   },
 
   async request(path, method = 'GET', body = null) {

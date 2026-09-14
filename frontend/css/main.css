@@ -112,6 +112,17 @@ body {
     flex: 1 1 auto;
 }
 
+/* 折叠菜单按钮：只在窄屏（≤480px）下出现，宽屏侧栏常驻展开不需要它 */
+.sidebar-toggle {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    .sidebar-toggle {
+        display: inline-flex;
+    }
+}
+
 /* ---------- 布局：左侧设备，右侧生成与预览 ---------- */
 
 .layout {
@@ -178,6 +189,18 @@ body {
 @media (max-width: 1023px) {
     .layout {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* 窄屏（手机竖屏）下把设备栏折叠成一个抽屉：默认收起，展开时把下方内容
+   （模板/预览那一栏）推下去，不做遮罩浮层——用户明确要求「插入式，不遮挡」 */
+@media (max-width: 480px) {
+    .sidebar-col {
+        display: none;
+    }
+
+    .sidebar-col.open {
+        display: flex;
     }
 }
 
