@@ -19,6 +19,18 @@ class PaintManager {
     this.textBold = false;
     this.textItalic = false;
 
+    // 贴图：粘贴剪贴板图片后可拖动/缩放，跟文字一样浮在画布上直到「完成贴图」才定稿
+    this.pastedImage = null;      // { img, x, y, width, height }（x/y 是左上角）
+    this.isDraggingImage = false;
+    this.isResizingImage = false;
+    this.imageDragOffsetX = 0;
+    this.imageDragOffsetY = 0;
+    this.resizeStartX = 0;
+    this.resizeStartY = 0;
+    this.resizeStartWidth = 0;
+    this.resizeStartHeight = 0;
+    this.pasteCanvasContext = null; // 贴图前的画布快照，拖动/缩放时用来擦除重画
+
     // Brush cursor indicator
     this.brushCursor = null;
 
@@ -38,6 +50,7 @@ class PaintManager {
     this.handleKeyboard = this.handleKeyboard.bind(this);
     this.updateBrushCursor = this.updateBrushCursor.bind(this);
     this.hideBrushCursor = this.hideBrushCursor.bind(this);
+    this.handlePasteEvent = this.handlePasteEvent.bind(this);
   }
 
   saveToHistory() {
@@ -139,6 +152,19 @@ class PaintManager {
       }
     });
 
+    document.getElementById('paste-mode').addEventListener('click', () => {
+      if (this.currentTool === 'paste') {
+        this.setActiveTool(null, '');
+      } else {
+        this.setActiveTool('paste', '贴图模式：Ctrl+V 粘贴剪贴板图片');
+      }
+    });
+
+    // 贴图抖动算法：跟主画布的下拉框选项一致（同一份 EPD_DITHER_ALGS），
+    // 但默认值不同——贴图大概率是照片，Floyd-Steinberg 更合适
+    fillSelect('paste-ditherAlg', EPD_DITHER_ALGS, 'value', 'label');
+    document.getElementById('paste-ditherAlg').value = 'floydSteinberg';
+
     document.getElementById('brush-color').addEventListener('change', (e) => {
       this.brushColor = e.target.value;
     });
@@ -165,6 +191,9 @@ class PaintManager {
     document.getElementById('undo-btn').addEventListener('click', () => this.undo());
     document.getElementById('redo-btn').addEventListener('click', () => this.redo());
 
+    document.getElementById('paste-apply-btn').addEventListener('click', () => this.commitPastedImage());
+    document.getElementById('paste-cancel-btn').addEventListener('click', () => this.cancelPastedImage());
+
     this.canvas.addEventListener('mousedown', this.startPaint);
     this.canvas.addEventListener('mousemove', this.paint);
     this.canvas.addEventListener('mouseup', this.endPaint);
@@ -178,6 +207,8 @@ class PaintManager {
 
     // Keyboard shortcuts for undo/redo
     document.addEventListener('keydown', this.handleKeyboard);
+    // 粘贴事件挂在 document 上：贴图模式下焦点不一定在画布，不然 Ctrl+V 可能没反应
+    document.addEventListener('paste', this.handlePasteEvent);
 
     // Mouse move for brush cursor
     this.canvas.addEventListener('mouseenter', this.updateBrushCursor);
@@ -210,10 +241,12 @@ class PaintManager {
     this.canvas.parentNode.classList.toggle('brush-mode', this.currentTool === 'brush');
     this.canvas.parentNode.classList.toggle('eraser-mode', this.currentTool === 'eraser');
     this.canvas.parentNode.classList.toggle('text-mode', this.currentTool === 'text');
+    this.canvas.parentNode.classList.toggle('paste-mode', this.currentTool === 'paste');
 
     document.getElementById('brush-mode').classList.toggle('active', this.currentTool === 'brush');
     document.getElementById('eraser-mode').classList.toggle('active', this.currentTool === 'eraser');
     document.getElementById('text-mode').classList.toggle('active', this.currentTool === 'text');
+    document.getElementById('paste-mode').classList.toggle('active', this.currentTool === 'paste');
 
     document.getElementById('brush-color').disabled = this.currentTool === 'eraser';
     document.getElementById('brush-size').disabled = this.currentTool === 'text';
@@ -223,6 +256,8 @@ class PaintManager {
 
     // Cancel any pending text placement
     this.cancelTextPlacement();
+    // 切走贴图工具时，未确认的贴图直接作废（跟裁剪模式切走的行为一致）
+    if (this.currentTool !== 'paste' && this.pastedImage) this.cancelPastedImage();
   }
 
   createBrushCursor() {
@@ -341,6 +376,8 @@ class PaintManager {
 
         return; // Don't start drawing
       }
+    } else if (this.currentTool === 'paste') {
+      this.startPasteInteraction(e);
     } else {
       this.painting = true;
       this.draw(e);
@@ -353,6 +390,8 @@ class PaintManager {
     }
     this.painting = false;
     this.isDraggingText = false;
+    this.isDraggingImage = false;
+    this.isResizingImage = false;
     this.lastX = 0;
     this.lastY = 0;
 
@@ -366,6 +405,8 @@ class PaintManager {
       if (this.isDraggingText && this.selectedTextElement) {
         this.dragText(e);
       }
+    } else if (this.currentTool === 'paste') {
+      this.dragOrResizePastedImage(e);
     } else {
       if (this.painting) {
         this.draw(e);
@@ -627,5 +668,193 @@ class PaintManager {
   clearElements() {
     this.textElements = [];
     this.lineSegments = [];
+    // 切模板/清画布时贴图状态也一起作废，不然会残留一个操作不到但仍占用状态的贴图
+    if (this.pastedImage) this.cancelPastedImage();
+  }
+
+  // ---------------- 贴图（粘贴剪贴板图片） ----------------
+  // 交互模型跟文字类似：粘贴后先浮在画布上（未定稿），可拖动/缩放，
+  // 点「完成贴图」才真正画进画布并存历史；点「取消」或切走工具直接作废。
+
+  async handlePasteEvent(e) {
+    if (this.currentTool !== 'paste') return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        await this.loadPastedImage(blob);
+        return;
+      }
+    }
+    addLog('剪贴板里没有图片，Ctrl+C 复制一张图片后再试');
+  }
+
+  loadPastedImage(blob) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        // 新粘贴的图片替换掉上一张未定稿的（跟文字工具「一次只处理一个」的模型一致）
+        if (this.pastedImage) this.cancelPastedImage();
+
+        // 初始尺寸：不超过画布的 80%，且保持原图比例，避免一贴图就铺满/超出画布
+        const maxW = this.canvas.width * 0.8;
+        const maxH = this.canvas.height * 0.8;
+        const ratio = Math.min(1, maxW / img.width, maxH / img.height);
+        const width = Math.max(10, Math.round(img.width * ratio));
+        const height = Math.max(10, Math.round(img.height * ratio));
+
+        this.pastedImage = {
+          img,
+          x: Math.round((this.canvas.width - width) / 2),
+          y: Math.round((this.canvas.height - height) / 2),
+          width,
+          height,
+        };
+        this.pasteCanvasContext = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        this.drawPastedImage();
+        setCanvasTitle('拖动移动，拖右下角缩放，完成后点击「完成贴图」');
+        this.canvas.parentNode.classList.add('has-pasted-image');
+        resolve();
+      };
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+
+  // 贴图手柄的边长（画布坐标），足够大方便拖拽，同时不会显得太突兀
+  static get HANDLE_SIZE() { return 14; }
+
+  drawPastedImage() {
+    if (!this.pasteCanvasContext) return;
+    this.ctx.putImageData(this.pasteCanvasContext, 0, 0);
+    if (!this.pastedImage) return;
+    const { img, x, y, width, height } = this.pastedImage;
+    this.ctx.drawImage(img, x, y, width, height);
+
+    // 虚线边框 + 右下角缩放手柄，方便看清可操作范围（这层视觉提示只在预览阶段画，
+    // 「完成贴图」时不会画进最终画布，因为定稿走的是普通 drawImage 到干净画布上）
+    this.ctx.save();
+    this.ctx.strokeStyle = '#1565c0';
+    this.ctx.lineWidth = 1;
+    this.ctx.setLineDash([6, 4]);
+    this.ctx.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
+    this.ctx.setLineDash([]);
+    const hs = PaintManager.HANDLE_SIZE;
+    this.ctx.fillStyle = '#1565c0';
+    this.ctx.fillRect(x + width - hs / 2, y + height - hs / 2, hs, hs);
+    this.ctx.restore();
+  }
+
+  // 判断按下点落在贴图主体还是右下角缩放手柄上
+  pasteHitTest(x, y) {
+    if (!this.pastedImage) return null;
+    const { x: px, y: py, width, height } = this.pastedImage;
+    const hs = PaintManager.HANDLE_SIZE;
+    const hx = px + width - hs / 2;
+    const hy = py + height - hs / 2;
+    if (x >= hx && x <= hx + hs && y >= hy && y <= hy + hs) return 'resize';
+    if (x >= px && x <= px + width && y >= py && y <= py + height) return 'move';
+    return null;
+  }
+
+  canvasPoint(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+
+  startPasteInteraction(e) {
+    if (!this.pastedImage) return;
+    const { x, y } = this.canvasPoint(e);
+    const hit = this.pasteHitTest(x, y);
+    if (hit === 'resize') {
+      this.isResizingImage = true;
+      this.resizeStartX = x;
+      this.resizeStartY = y;
+      this.resizeStartWidth = this.pastedImage.width;
+      this.resizeStartHeight = this.pastedImage.height;
+    } else if (hit === 'move') {
+      this.isDraggingImage = true;
+      this.imageDragOffsetX = this.pastedImage.x - x;
+      this.imageDragOffsetY = this.pastedImage.y - y;
+    }
+  }
+
+  dragOrResizePastedImage(e) {
+    if (!this.pastedImage) return;
+    const { x, y } = this.canvasPoint(e);
+    if (this.isResizingImage) {
+      const minSize = PaintManager.HANDLE_SIZE * 2;
+      // 等比缩放：按拖动距离较大的那一轴算比例，另一轴跟着原始宽高比走，
+      // 避免把图片拖变形——手柄在右下角，往右下拖同时增大两边是符合直觉的操作
+      const ratio = this.resizeStartWidth / this.resizeStartHeight;
+      const dx = x - this.resizeStartX;
+      const dy = y - this.resizeStartY;
+      let newWidth, newHeight;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        newWidth = Math.max(minSize, this.resizeStartWidth + dx);
+        newHeight = newWidth / ratio;
+      } else {
+        newHeight = Math.max(minSize, this.resizeStartHeight + dy);
+        newWidth = newHeight * ratio;
+      }
+      if (newHeight < minSize) { newHeight = minSize; newWidth = newHeight * ratio; }
+      if (newWidth < minSize) { newWidth = minSize; newHeight = newWidth / ratio; }
+      // 不封顶到画布之外，缩放本身允许贴图局部超出边界（跟移动一致，「完成贴图」时会被裁掉）
+      this.pastedImage.width = Math.round(newWidth);
+      this.pastedImage.height = Math.round(newHeight);
+      this.drawPastedImage();
+    } else if (this.isDraggingImage) {
+      this.pastedImage.x = Math.round(x + this.imageDragOffsetX);
+      this.pastedImage.y = Math.round(y + this.imageDragOffsetY);
+      this.drawPastedImage();
+    }
+  }
+
+  // 定稿：贴图区域单独跑一遍抖动（用贴图自己的算法，但沿用主画布当前的
+  // 颜色模式/亮度/对比度/强度），再画到干净画布上，不带虚线框/手柄，加入历史。
+  // 只处理贴图这一块区域，不影响画布上其他已经量化过的内容。
+  commitPastedImage() {
+    if (!this.pastedImage) return;
+    this.ctx.putImageData(this.pasteCanvasContext, 0, 0);
+    const { img, x, y, width, height } = this.pastedImage;
+
+    // 先把图片画到离屏 canvas 上取出像素，抖动运算不依赖主画布的当前内容
+    const off = document.createElement('canvas');
+    off.width = width;
+    off.height = height;
+    const offCtx = off.getContext('2d');
+    offCtx.drawImage(img, 0, 0, width, height);
+    let imageData = offCtx.getImageData(0, 0, width, height);
+
+    const mode = document.getElementById('ditherMode').value;
+    const alg = document.getElementById('paste-ditherAlg').value;
+    const strength = parseFloat(document.getElementById('ditherStrength').value);
+    adjustBrightness(imageData, parseFloat(document.getElementById('ditherBrightness').value));
+    adjustContrast(imageData, parseFloat(document.getElementById('ditherContrast').value));
+    imageData = ditherImage(imageData, alg, strength, mode);
+    const packed = packImageData(imageData, mode);
+    const decoded = decodeImageData(packed, width, height, mode);
+    offCtx.putImageData(decoded, 0, 0);
+
+    // 贴图允许拖出画布边界，drawImage 会自动裁掉超出主画布可见区域的部分
+    this.ctx.drawImage(off, x, y, width, height);
+
+    this.pastedImage = null;
+    this.pasteCanvasContext = null;
+    this.canvas.parentNode.classList.remove('has-pasted-image');
+    setCanvasTitle('贴图模式：Ctrl+V 粘贴剪贴板图片');
+    this.saveToHistory();
+  }
+
+  // 作废：恢复贴图前的画布内容，不留痕迹
+  cancelPastedImage() {
+    if (this.pasteCanvasContext) this.ctx.putImageData(this.pasteCanvasContext, 0, 0);
+    this.pastedImage = null;
+    this.pasteCanvasContext = null;
+    this.canvas.parentNode.classList.remove('has-pasted-image');
+    if (this.currentTool === 'paste') setCanvasTitle('贴图模式：Ctrl+V 粘贴剪贴板图片');
   }
 }

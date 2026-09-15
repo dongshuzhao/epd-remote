@@ -108,6 +108,11 @@ body {
     letter-spacing: .01em;
 }
 
+.app-logo {
+    flex: 0 0 auto;
+    border-radius: 6px;
+}
+
 .app-bar .spacer {
     flex: 1 1 auto;
 }
@@ -120,6 +125,12 @@ body {
 @media (max-width: 480px) {
     .sidebar-toggle {
         display: inline-flex;
+    }
+
+    /* 窄屏顶栏空间紧张：折叠按钮 + logo 已经能表意，标题文字让出空间给
+       信号/连接状态胶囊，避免挤到要横向滚动或把胶囊压得只剩省略号 */
+    .app-bar h1 {
+        display: none;
     }
 }
 
@@ -306,10 +317,10 @@ details.subtle > summary {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    height: 30px;
+    height: 36px;
     padding: 0 12px;
     border: 1px solid var(--outline);
-    border-radius: 15px;
+    border-radius: 18px;
     color: var(--on-surface-variant);
     font-size: 13px;
     cursor: pointer;
@@ -798,7 +809,7 @@ button.conn-state.signal.weak .rssi-bar.lit {
     flex: 0 0 74px;
     color: var(--on-surface-variant);
     font-size: 12px;
-    text-align: right;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -925,6 +936,13 @@ button.conn-state.signal.weak .rssi-bar.lit {
     font-size: 13px;
 }
 
+/* 完成裁剪/完成贴图/取消这几个带图标的按钮也收成方形，跟 .tool-button 统一 */
+.canvas-toolbar button.icon-btn.small {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
 .canvas-toolbar select,
 .canvas-toolbar input[type="text"],
 .canvas-toolbar input[type="number"] {
@@ -950,10 +968,11 @@ button.conn-state.signal.weak .rssi-bar.lit {
     border-left: 1px solid var(--outline);
 }
 
-/* 画笔 / 文字 / 裁剪工具按当前模式显示 */
+/* 画笔 / 文字 / 裁剪 / 贴图工具按当前模式显示 */
 .brush-tools,
 .text-tools,
-.crop-tools {
+.crop-tools,
+.paste-tools {
     display: none;
 }
 
@@ -982,6 +1001,19 @@ button.conn-state.signal.weak .rssi-bar.lit {
 canvas.text-placement-mode {
     border: 2px dashed var(--primary) !important;
     cursor: text !important;
+}
+
+.canvas-container.paste-mode canvas {
+    cursor: crosshair;
+}
+
+/* 贴图工具条：粘贴出图片后才显示完成/取消按钮，见 paint.js 里 loadPastedImage/
+   commitPastedImage/cancelPastedImage 对 has-pasted-image class 的增删 */
+.canvas-container.paste-mode.has-pasted-image .paste-tools {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
 }
 
 /* ---------- 历史版本（占位） ---------- */

@@ -77,7 +77,7 @@ function onTemplateChange() {
   const tpl = findTemplate(value);
 
   el('imageRow').classList.toggle('hide', !isImage);
-  el('tplRenderbutton').textContent = isImage ? '载入图片' : '渲染到画布';
+  el('tplRenderbuttonText').textContent = isImage ? '载入图片' : '渲染到画布';
   el('tplDefaultsbutton').classList.toggle('hide', !tpl);
   el('tplClearbutton').classList.toggle('hide', !tpl);
 
@@ -960,6 +960,10 @@ function totalBytesText(planes) {
 async function sendimg() {
   if (cropManager.isCropMode()) {
     alert('请先完成图片裁剪！发送已取消。');
+    return;
+  }
+  if (paintManager.pastedImage) {
+    alert('请先完成或取消贴图！发送已取消。');
     return;
   }
 
