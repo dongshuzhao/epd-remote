@@ -140,6 +140,10 @@
 			<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
 			<path d="m21.854 2.147-10.94 10.939" />
 		</symbol>
+		<symbol id="i-sliders" viewBox="0 0 24 24">
+			<path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" />
+			<path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" />
+		</symbol>
 	</svg>
 
 	<header class="app-bar">
@@ -154,7 +158,7 @@
 		</button>
 		<span class="status-bar"><span id="status"></span></span>
 		<span class="spacer"></span>
-		<a href="?debug=true" id="debug-toggle" class="app-link">开发模式</a>
+		<a href="?debug=true" id="debug-toggle" class="app-link" title="开发模式">开发模式</a>
 	</header>
 
 	<main class="layout">
@@ -162,7 +166,7 @@
 			<section class="card">
 				<h2 class="card-title">设备连接</h2>
 				<div class="row">
-					<div class="field grow">
+					<div class="field grow field-inline">
 						<label for="savedDevices">已记忆</label>
 						<select id="savedDevices" class="grow" onchange="onSavedDeviceChange()"></select>
 					</div>
@@ -241,15 +245,15 @@
 				<div class="template-vars" id="templateVars"></div>
 				<hr class="divider">
 				<div class="row">
-					<div class="field">
+					<div class="field field-inline">
 						<label for="templateSelect">模板</label>
 						<select id="templateSelect" class="w-md" onchange="onTemplateChange()"></select>
 					</div>
-					<button id="tplDefaultsbutton" type="button" onclick="fillTemplateDefaults()"><svg class="icon"><use href="#i-list-restart" /></svg>填入默认值</button>
-					<button id="tplClearbutton" type="button" onclick="clearTemplateVars()"><svg class="icon"><use href="#i-file-x" /></svg>清空变量</button>
+					<button id="tplDefaultsbutton" type="button" class="btn-icon-collapse" title="填入默认值" onclick="fillTemplateDefaults()"><svg class="icon"><use href="#i-list-restart" /></svg><span>填入默认值</span></button>
+					<button id="tplClearbutton" type="button" class="btn-icon-collapse" title="清空变量" onclick="clearTemplateVars()"><svg class="icon"><use href="#i-file-x" /></svg><span>清空变量</span></button>
 					<span class="spacer"></span>
 					<details class="subtle right" id="adjustPanel">
-						<summary>图像调整</summary>
+						<summary title="图像调整"><svg class="icon"><use href="#i-sliders" /></svg><span class="summary-text">图像调整</span></summary>
 						<div class="panel">
 							<div class="row debug">
 								<div class="field">
@@ -296,20 +300,22 @@
 							</div>
 						</div>
 					</details>
-					<button type="button" class="debug" onclick="downloadDataArray()"><svg class="icon"><use href="#i-download" /></svg>下载数组</button>
-					<button type="button" class="debug" onclick="rotateCanvas()"><svg class="icon"><use href="#i-rotate" /></svg>旋转画布</button>
-					<button type="button" onclick="clearCanvas()"><svg class="icon"><use href="#i-eraser" /></svg>清除画布</button>
-					<button id="tplRenderbutton" type="button" onclick="renderCurrentTemplate()"><svg class="icon"><use href="#i-wand" /></svg><span id="tplRenderbuttonText">渲染到画布</span></button>
+					<button type="button" class="debug btn-icon-collapse" title="下载数组" onclick="downloadDataArray()"><svg class="icon"><use href="#i-download" /></svg><span>下载数组</span></button>
+					<button type="button" class="debug btn-icon-collapse" title="旋转画布" onclick="rotateCanvas()"><svg class="icon"><use href="#i-rotate" /></svg><span>旋转画布</span></button>
+					<button type="button" class="btn-icon-collapse" title="清除画布" onclick="clearCanvas()"><svg class="icon"><use href="#i-eraser" /></svg><span>清除画布</span></button>
+					<button id="tplRenderbutton" type="button" class="btn-icon-collapse" title="渲染到画布" onclick="renderCurrentTemplate()"><svg class="icon"><use href="#i-wand" /></svg><span id="tplRenderbuttonText">渲染到画布</span></button>
+					<span class="flex-break" aria-hidden="true"></span>
 					<button id="sendimgbutton" type="button" class="primary" onclick="sendimg()"><svg class="icon"><use href="#i-send" /></svg>发送图片</button>
 				</div>
 			</section>
 			<section class="card fill">
 				<h2 class="card-title">预览
 					<span class="hint" id="previewZoomInfo"></span>
-					<span class="right field">
+					<span class="right field" id="previewZoomField">
 						<label for="previewZoom">缩放</label>
 						<select id="previewZoom" onchange="setPreviewZoom(this.value)">
 							<option value="auto">自适应(整数倍)</option>
+							<option value="free">自适应(自由比例)</option>
 							<option value="1">1x 点对点</option>
 							<option value="2">2x</option>
 							<option value="3">3x</option>

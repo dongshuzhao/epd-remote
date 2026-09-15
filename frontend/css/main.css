@@ -74,9 +74,17 @@
     box-sizing: border-box;
 }
 
+html {
+    /* 兜底：任何单个元素意外超宽都不该让整页能横向滚动/露白边，
+       纵向滚动不受影响。真正的溢出源仍单独修（见 .app-bar 等）。 */
+    overflow-x: hidden;
+}
+
 body {
     margin: 0;
     min-height: 100vh;
+    max-width: 100%;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     background: var(--background);
@@ -99,6 +107,9 @@ body {
     padding: 8px 16px;
     background: var(--surface);
     box-shadow: var(--elev-1);
+    /* 顶栏不换行，靠各元素自身可收缩来适应窄屏，整体不超出视口宽度 */
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .app-bar h1 {
@@ -122,6 +133,17 @@ body {
     display: none;
 }
 
+/* 展开态用主色实心突出，收起态维持默认灰色描边，一眼能看出侧栏开没开 */
+.sidebar-toggle.active {
+    color: var(--on-primary);
+    background: var(--primary);
+    border-color: transparent;
+}
+
+.sidebar-toggle.active:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
+
 @media (max-width: 480px) {
     .sidebar-toggle {
         display: inline-flex;
@@ -131,6 +153,15 @@ body {
        信号/连接状态胶囊，避免挤到要横向滚动或把胶囊压得只剩省略号 */
     .app-bar h1 {
         display: none;
+    }
+
+    /* 顶栏各胶囊允许收缩，别把顶栏顶宽——之前每个 chip 各占 46vw/40vw，
+       同时出现（未连接+信号+传输状态）时相加会超过 100vw 撑破顶栏 */
+    .app-bar .conn-state,
+    .app-bar .status-bar {
+        min-width: 0;
+        flex: 0 1 auto;
+        max-width: none;
     }
 }
 
@@ -263,6 +294,12 @@ body {
 .row .grow {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* flex 换行辅助元素：默认不占位（宽屏按钮正常排一行），窄屏下变成整行宽的
+   零高元素，强制把它后面的「发送图片」按钮挤到新的一行 */
+.flex-break {
+    display: none;
 }
 
 /* 下拉里出现超长设备名时，只让下拉自己变窄，不能把同行按钮挤到下一行 */
@@ -1076,6 +1113,24 @@ body.debug-mode .app-link {
 
     .app-bar {
         padding: 10px 12px;
+        gap: 8px;
+    }
+
+    /* 开发模式链接在窄屏太占地方，文字本身不重要，收成一个小圆点提示 */
+    .app-link {
+        padding: 0;
+        width: 8px;
+        height: 8px;
+        min-width: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        color: transparent;
+        border: none;
+        background: var(--outline-strong);
+    }
+
+    body.debug-mode .app-link {
+        background: var(--primary);
     }
 
     .conn-state {
@@ -1084,6 +1139,191 @@ body.debug-mode .app-link {
 
     .field > label {
         min-width: 64px;
+    }
+
+    /* 窄屏下按钮行的图标按钮更紧凑一点，减少每行占用的宽度 */
+    button {
+        padding: 0 12px;
+    }
+
+    button.small {
+        padding: 0 10px;
+    }
+
+    /* 触屏点击热区不能太小：工具条按钮加大，比鼠标操作时更好点 */
+    .tool-button,
+    .canvas-toolbar button.icon-btn.small {
+        width: 34px;
+        height: 34px;
+    }
+
+    .canvas-toolbar button:not(.tool-button):not(.icon-btn) {
+        height: 34px;
+    }
+
+    /* 生成/发送这一行按钮很多，窄屏放不下一行时允许整体换行，
+       但同一个按钮内部（图标+文字）不拆开 */
+    .row {
+        gap: 6px;
+    }
+
+    /* 「图像调整」浮层：窄屏改成钉在视口左右边距内的固定浮层，
+       不再相对触发按钮定位（按钮在行中间时，往任一侧展开都会超出视口）。
+       top: auto 让它保持在按钮附近的静态纵向位置，横向则被 left/right 夹住不溢出。 */
+    details.subtle.right > .panel,
+    details.subtle > .panel {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        top: auto;
+        min-width: 0;
+        width: auto;
+        max-width: none;
+        max-height: 60vh;
+        overflow: auto;
+    }
+
+    /* 数字输入框、下拉框默认宽度是按桌面场景写的，窄屏里让它们跟着容器缩 */
+    input[type="number"] {
+        width: 72px;
+    }
+
+    .w-md {
+        max-width: 140px;
+    }
+
+    /* 历史版本/日志两块内容多、窄屏纵向空间也紧张，各自降低最大高度，
+       让用户不用滚动太久就能看到右栏的生成/预览区 */
+    .history-list {
+        max-height: 110px;
+    }
+
+    .log-container {
+        height: 90px;
+    }
+
+    /* 次要按钮只留图标：文字仍在 DOM 里（保留 title 提示），
+       视觉上隐藏，不影响点击逻辑和 renderCurrentTemplate 等函数对
+       #tplRenderbuttonText 之类节点的文案更新 */
+    .btn-icon-collapse span {
+        display: none;
+    }
+
+    .btn-icon-collapse {
+        width: 36px;
+        padding: 0;
+    }
+
+    /* 「图像调整」下拉按钮在窄屏也收成纯图标方钮，跟其他图标按钮一致 */
+    #adjustPanel > summary {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    #adjustPanel > summary .summary-text {
+        display: none;
+    }
+
+    #adjustPanel > summary::after {
+        content: none;
+    }
+
+    /* 窄屏：除「发送图片」外的按钮都在上一行（图标钮紧凑排列）；
+       .flex-break 撑满整行把发送按钮挤到下一行，并让它居中单独成行 */
+    .flex-break {
+        display: block;
+        flex: 0 0 100%;
+        width: 100%;
+        height: 0;
+        margin: 0;
+    }
+
+    #sendimgbutton {
+        margin: 4px auto 0;
+    }
+
+    /* 表单字段每行一个：宽屏下 label+控件挤在一行会太窄，改成上下堆叠 */
+    .field {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 2px;
+    }
+
+    /* 「模板」「已记忆」这类标签短的项，标签跟控件保持同一行，
+       不跟随上面 .field 的整体堆叠规则 */
+    .field.field-inline {
+        flex-direction: row;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .field > label {
+        min-width: 0;
+    }
+
+    .row .field {
+        flex: 1 1 100%;
+    }
+
+    .row .field.grow {
+        flex: 1 1 100%;
+    }
+
+    /* field-inline 默认按内容宽度、可收缩（如「模板」），不强占整行；
+       带 grow 的（如「已记忆」）则横向撑开，让下拉框填满、把连接/设备管理
+       按钮留在同一行末尾，而不是被挤到下一行 */
+    .row .field.field-inline {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .row .field.field-inline.grow {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* 「图像调整」浮层里同理，字段各占一行，滑块和数值贴着标签 */
+    details.subtle .field {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* 侧栏收起时用抽屉展开，窄屏下这一列本身也不需要固定最小宽度 */
+    .layout {
+        gap: 8px;
+    }
+
+    /* 移动端屏幕尺寸多变，整数倍缩放常常一格都放不满、退到极小的点对点，
+       改成固定用自由比例铺满容器，缩放选择框本身也不再需要，直接隐藏 */
+    #previewZoomField {
+        display: none;
+    }
+
+    /* 模板变量表单在窄屏最多两列，避免每项都挤成一条难以辨认的窄条 */
+    .template-vars {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        /* 移动端直接纵向铺开，去掉最大高度，别出内部滚动条——整页自然滚动即可 */
+        max-height: none;
+        overflow: visible;
+    }
+
+    .template-vars.cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .template-vars .tpl-var label {
+        flex: 0 0 52px;
+    }
+}
+
+/* 极窄屏（如 iPhone SE 375px）：生成按钮行放不下这么多按钮，「渲染到画布」
+   会被挤到下一行。它和自动预览（改表单即时渲染、发送前也会重渲）功能重叠，
+   属于可省的手动入口，这里直接隐藏，保证一行排得下、发送按钮仍单独居中一行。 */
+@media (max-width: 400px) {
+    #tplRenderbutton {
+        display: none;
     }
 }
 

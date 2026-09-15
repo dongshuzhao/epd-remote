@@ -5,7 +5,7 @@ let startTime;
 let sending = false;
 let mtuOverridden = false;  // MTU 默认由固件上报，仅在手工改过时才覆盖
 let ditherAlgOverridden = false;  // 手工改过抖动算法后不再自动切换
-let previewZoom = 'auto';   // 预览缩放：auto 或整数倍
+let previewZoom = 'auto';   // 预览缩放：auto(整数倍) / free(自由比例) / 整数倍字符串
 let deviceStatus = { connected: false };
 let savedDevices = [];
 let lastAddress = '';       // 上次使用的设备，后端持久化
@@ -1229,6 +1229,28 @@ function applyPreviewZoom() {
   if (!canvas) return;
   const avail = previewAvailable();
 
+  // 窄屏（≤480px）下缩放选择框本身被隐藏，强制用自由比例——移动端屏幕尺寸
+  // 多变，整数倍缩放经常一格都放不满、退化成很小的点对点，自由比例能让预览
+  // 框跟着可用空间灵活变化。断点数值跟 main.css 里隐藏 #previewZoomField 的
+  // @media (max-width: 480px) 保持一致。
+  const forceFree = window.matchMedia('(max-width: 480px)').matches;
+
+  // 自由比例：不追求点对点，直接按容器可用宽高等比缩放铺满，用 CSS 尺寸控制显示，
+  // 不受「整数倍/整数分之一」的限制——移动端横竖屏空间变化大，比起像素级对齐，
+  // 更需要预览框本身能灵活变小，不把画布挤到要滚动的地步。
+  if (previewZoom === 'free' || forceFree) {
+    const heightLimit = Number.isFinite(avail.height) ? avail.height : Infinity;
+    const scale = Math.min(avail.width / canvas.width, heightLimit / canvas.height);
+    const w = Math.max(1, Math.round(canvas.width * scale));
+    const h = Math.max(1, Math.round(canvas.height * scale));
+    canvas.style.transform = '';  // 自由比例本就不追求点对点，不做像素吸附
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const info = el('previewZoomInfo');
+    if (info) info.textContent = `${canvas.width}x${canvas.height} @ ${scale.toFixed(2)}x`;
+    return;
+  }
+
   let scale;
   if (previewZoom === 'auto') {
     if (canvas.width > avail.width) {
@@ -1251,6 +1273,24 @@ function applyPreviewZoom() {
   if (info) {
     info.textContent = `${canvas.width}x${canvas.height} @ `
       + (scale >= 1 ? `${scale}x` : `1/${Math.round(1 / scale)}`);
+  }
+  snapCanvasToPixelGrid();
+}
+
+// image-rendering: pixelated 只有在画布落在整数设备像素上时才是清晰的点对点。
+// flex 居中时，容器「画布两侧留白」为奇数会把画布顶到半个像素上（left=…​.5），
+// 于是浏览器对最近邻缩放的结果再做一次重采样，看起来就发虚。这里量出画布相对
+// 设备像素网格的小数偏移，用 transform 反向拉回，保证整数倍缩放始终锐利。
+function snapCanvasToPixelGrid() {
+  if (!canvas) return;
+  canvas.style.transform = '';  // 先清掉旧偏移再量真实位置
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const snap = (v) => Math.round(v * dpr) / dpr;
+  const dx = rect.left - snap(rect.left);
+  const dy = rect.top - snap(rect.top);
+  if (dx || dy) {
+    canvas.style.transform = `translate(${-dx}px, ${-dy}px)`;
   }
 }
 
@@ -1402,7 +1442,10 @@ function checkDebugMode() {
 // 宽屏下这个按钮本身就不显示（见 main.css 的 .sidebar-toggle），
 // 侧栏始终是展开的 .sidebar-col 默认样式，不受这个开关影响。
 function toggleSidebar() {
-  el('sidebarCol').classList.toggle('open');
+  const open = el('sidebarCol').classList.toggle('open');
+  // 同步按钮的选中态，让展开/收起有明显的蓝/灰区分
+  el('sidebarToggle').classList.toggle('active', open);
+  applyPreviewZoom();
 }
 
 // 后端推送的日志与传输进度
