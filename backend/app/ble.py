@@ -176,7 +176,16 @@ class EpdManager:
                     return True
                 return False
 
-            device = await BleakScanner.find_device_by_filter(_match, timeout=timeout)
+            # 扫描本身也可能抛底层异常（如 BlueZ 一时报 "No Bluetooth adapters
+            # found."——适配器在容器/宿主里偶发瞬时不可用），必须包成 EpdError：
+            # 一是让前端拿到清晰的 400 而不是 500，二是让 /api/image 的 auto_retry
+            # 能识别并转入定时轮询，而不是当成未捕获异常直接崩掉这次请求。
+            try:
+                device = await BleakScanner.find_device_by_filter(_match, timeout=timeout)
+            except EpdError:
+                raise
+            except Exception as e:
+                raise EpdError(f"扫描失败: {e or repr(e)}") from e
             if device is None:
                 raise EpdError(f"未找到设备 {address}，请确认墨水屏已上电且在范围内")
             self.rssi = adv_rssi.get("rssi")
