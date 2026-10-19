@@ -143,12 +143,40 @@ function tplSetFont(ctx, size, opts = {}) {
     const w = weight || (bold ? TPL_TITLE_WEIGHT_BOLD : TPL_TITLE_WEIGHT);
     ctx.textRendering = 'auto';
     ctx.font = `${w} ${px}px ${TPL_TITLE_FONT}`;
+    _tplBitmap = false;
+    _tplGap = 0;
     return px;
   }
   const step = tplSnapBody(size);
   ctx.textRendering = 'geometricPrecision';
   ctx.font = `${step.px}px ${step.family}`;
+  // 点阵宋的半角字形（英文/数字/ASCII 符号）右侧几乎没有字间空隙：一个英文夹在
+  // 两个汉字中间时右边会贴死汉字，连续英文也会糊成一片。这里给点阵正文的每个
+  // ASCII 可见字符补一点右侧间距（随字号成比例），汉字之间保持原样不动。
+  _tplBitmap = true;
+  _tplGap = Math.max(1, Math.round(step.px / 15));
   return step.px;
+}
+
+// tplSetFont 记录的当前点阵状态：是否点阵正文、每个 ASCII 字符补的右侧间距(px)
+let _tplBitmap = false;
+let _tplGap = 0;
+
+// 点阵正文下，可见 ASCII 字符（0x21-0x7e，含字母/数字/标点）补间距，其余为 0
+const TPL_LATIN_RE = /[\x21-\x7e]/;
+function tplCharGap(ch) {
+  return _tplBitmap && TPL_LATIN_RE.test(ch) ? _tplGap : 0;
+}
+
+// 与绘制一致的文本宽度测量：点阵正文下把每个 ASCII 字符的补偿间距一并算进去，
+// 保证折行、居中/右对齐、截断等用到的宽度和实际画出来的宽度对得上。
+function tplTextWidth(ctx, str) {
+  str = String(str == null ? '' : str);
+  let w = ctx.measureText(str).width;
+  if (_tplBitmap) {
+    for (const ch of str) w += tplCharGap(ch);
+  }
+  return w;
 }
 
 // 点阵文字必须落在整数像素上，否则浏览器会做子像素定位导致糊边。
@@ -162,9 +190,16 @@ function tplDrawAligned(ctx, str, x, y, align, bitmap) {
   }
   ctx.textAlign = 'left';
   let left = x;
-  if (align === 'center') left = x - ctx.measureText(str).width / 2;
-  else if (align === 'right') left = x - ctx.measureText(str).width;
-  ctx.fillText(str, Math.round(left), Math.round(y));
+  if (align === 'center') left = x - tplTextWidth(ctx, str) / 2;
+  else if (align === 'right') left = x - tplTextWidth(ctx, str);
+  const baseY = Math.round(y);
+  // 逐字绘制：每个字光标落在整数像素上（保持点阵锐利），ASCII 字符画完额外
+  // 前进一点补偿间距，解决英文右侧贴字、连续英文糊成一片的问题。
+  let cursor = Math.round(left);
+  for (const ch of str) {
+    ctx.fillText(ch, cursor, baseY);
+    cursor = Math.round(cursor + ctx.measureText(ch).width + tplCharGap(ch));
+  }
 }
 
 // 画一行文字，支持右/居中对齐与超宽截断（截断时补省略号）
@@ -174,8 +209,8 @@ function tplText(ctx, text, x, y, opts = {}) {
   ctx.fillStyle = color;
   ctx.textBaseline = 'alphabetic';
   let str = String(text == null ? '' : text);
-  if (maxWidth > 0 && ctx.measureText(str).width > maxWidth) {
-    while (str.length > 1 && ctx.measureText(str + '…').width > maxWidth) {
+  if (maxWidth > 0 && tplTextWidth(ctx, str) > maxWidth) {
+    while (str.length > 1 && tplTextWidth(ctx, str + '…') > maxWidth) {
       str = str.slice(0, -1);
     }
     str += '…';
@@ -202,17 +237,17 @@ function tplWrapLines(ctx, text, maxWidth, maxLines = 0) {
     let line = '';
     for (const token of tokens) {
       const candidate = line + token;
-      if (line !== '' && ctx.measureText(candidate).width > widthAt(lines.length)) {
+      if (line !== '' && tplTextWidth(ctx, candidate) > widthAt(lines.length)) {
         if (!pushLine(line)) return lines;
         line = /^\s+$/.test(token) ? '' : token;
       } else {
         line = candidate;
       }
       // 单个词本身就超宽：硬切
-      while (ctx.measureText(line).width > widthAt(lines.length) && line.length > 1) {
+      while (tplTextWidth(ctx, line) > widthAt(lines.length) && line.length > 1) {
         let cut = line.length - 1;
         while (cut > 1
-          && ctx.measureText(line.slice(0, cut)).width > widthAt(lines.length)) cut--;
+          && tplTextWidth(ctx, line.slice(0, cut)) > widthAt(lines.length)) cut--;
         if (!pushLine(line.slice(0, cut))) return lines;
         line = line.slice(cut);
       }
@@ -342,7 +377,7 @@ function tplHeader(ctx, title, right, w, h, s, accent, opts = {}) {
         color: '#FFFFFF', align: 'right'
       };
     tplSetFont(ctx, tagSize, tagOpts);
-    reserved = ctx.measureText(String(right)).width + margin;
+    reserved = tplTextWidth(ctx, String(right)) + margin;
     tplText(ctx, right, w - margin, barH - 12 * s, tagOpts);
   }
 
@@ -458,7 +493,7 @@ const EPD_TEMPLATES = [
       const labelWidth = (px) => {
         tplSetFont(ctx, px);
         return Math.max(...['语文', '数学', '英语', '其他', '通知']
-          .map((t) => ctx.measureText(labelText(t)).width)) + labelPad * 2;
+          .map((t) => tplTextWidth(ctx, labelText(t)))) + labelPad * 2;
       };
       const textGap = Math.max(2, Math.round(3 * s));
       const fullW = w - margin * 2;
